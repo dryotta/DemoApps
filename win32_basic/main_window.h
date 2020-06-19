@@ -1,12 +1,20 @@
 #pragma once
 
+#include "window.h"
+#include "custom_child.h"
+
 struct MainWindow : Window<MainWindow>
 {
-    float m_dpiX = 0.0f;
-    float m_dpiY = 0.0f;
+private:
+    inline static const std::wstring class_name{ L"DemoApp.Main.Window" };
 
-    MainWindow();
+    HWND button = nullptr;
+    CustomChild custom;
 
-    void CreateDesktopWindow();
     void SetupMessageHandlers();
+
+    HWND Create(LPCWSTR lpWindowName);
+    void ResizeChildWindows();
+public:
+    MainWindow();
 };

@@ -4,6 +4,8 @@
 //
 #define IDI_APP                         100
 
+#define ID_BUTTON                       2000
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

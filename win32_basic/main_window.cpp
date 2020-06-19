@@ -1,29 +1,19 @@
 #include "pch.h"
 #include "utils.h"
 
-#include "window.h"
 #include "main_window.h"
-
 #include "resource.h"
 
-extern "C" IMAGE_DOS_HEADER __ImageBase; // for hinstance
+static LONG const DefWindowWidth = 600;
+static LONG const DefWindowHeight = 400;
+static int Margin = 20;
+static int ButtonHeight = 80;
 
-static float const DefWindowWidth = 600.0f;
-static float const DefWindowHeight = 400.0f;
-
-MainWindow::MainWindow()
-{
-    SetupMessageHandlers(); // important to set up message handlers before creating the window
-
-    CreateDesktopWindow();
-}
-
-void MainWindow::CreateDesktopWindow()
-{
+MainWindow::MainWindow() {
     WNDCLASS wc = {};
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.hInstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
-    wc.lpszClassName = L"App.MainWindow";
+    wc.hInstance = GetModuleHandle(nullptr);
+    wc.lpszClassName = class_name.c_str();
     wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_APP));
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
@@ -31,86 +21,79 @@ void MainWindow::CreateDesktopWindow()
 
     RegisterClass(&wc);
 
-    ASSERT(!m_win);
-    VERIFY(CreateWindowEx(0,
-        wc.lpszClassName,
-        L"App Main Window",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        nullptr,
-        nullptr,
-        wc.hInstance,
-        this));
-    ASSERT(m_win);
+    SetupMessageHandlers(); // important to set up message handlers before creating the window
+
+    VERIFY(Create(L"App Main Window"));
 }
 
 void MainWindow::SetupMessageHandlers() {
-    on_msg(WM_CREATE, [this](WPARAM, LPARAM) -> LRESULT {
-        HMONITOR const monitor = MonitorFromWindow(m_win, MONITOR_DEFAULTTONEAREST);
-
-        unsigned dpiX = 0;
-        unsigned dpiY = 0;
-
-        check_hresult(GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY));
-
-        m_dpiX = static_cast<float>(dpiX);
-        m_dpiY = static_cast<float>(dpiY);
-
-        TRACE(L"DPI %.2f %.2f\n", m_dpiX, m_dpiY);
-
-        RECT rect =
-        {
-            0, 0,
-            static_cast<LONG>(LogicalToPhysical(DefWindowWidth, m_dpiX)),
-            static_cast<LONG>(LogicalToPhysical(DefWindowHeight, m_dpiY))
-        };
-
-        VERIFY(AdjustWindowRect(&rect, GetWindowLong(m_win, GWL_STYLE), false));
-
-        VERIFY(SetWindowPos(m_win, nullptr, 0, 0,
+    On(WM_CREATE, [this](WPARAM, LPARAM) -> LRESULT {
+        RECT rect = {0, 0, DefWindowWidth, DefWindowHeight};
+        VERIFY(AdjustWindowRect(&rect, GetWindowLong(hwnd, GWL_STYLE), false));
+        VERIFY(SetWindowPos(hwnd, nullptr, 0, 0,
             rect.right - rect.left, rect.bottom - rect.top,
             SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER));
 
-        TRACE(L"Adjusted %d %d %d %d\n",
-            rect.left, rect.top,
-            rect.right - rect.left,
-            rect.bottom - rect.top);
+        TRACE(L"Adjusted %d %d %d %d\n", rect.left, rect.top,
+            rect.right - rect.left, rect.bottom - rect.top);
+
+        VERIFY(GetClientRect(hwnd, &rect));
+        button = CreateWindow(L"BUTTON", L"Click me", 
+            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
+            0,0,0,0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
+
+        custom.Create(L"Hello", hwnd);
+
+        ResizeChildWindows();
 
         return 0;
     });
 
-    on_msg(WM_DESTROY, [this](WPARAM, LPARAM) -> LRESULT {
+    On(ID_BUTTON, [this]() {
+        custom.SetText(L"The button was clicked");
+    });
+
+    On(ID_BUTTON, BN_KILLFOCUS, [this]() {
+        custom.SetText(L"The button lost focus");
+    });
+
+    On(WM_DESTROY, [this](WPARAM, LPARAM) -> LRESULT {
         PostQuitMessage(0);
         return 0;
     });
 
-    on_msg(WM_PAINT, [this](WPARAM, LPARAM) -> LRESULT {
+    On(WM_PAINT, [this](WPARAM, LPARAM) -> LRESULT {
         RECT rect = {};
-        VERIFY(GetClientRect(m_win, &rect));
+        VERIFY(GetClientRect(hwnd, &rect));
 
-        TRACE(L"Client size %.2f %.2f\n",
-            PhysicalToLogical(rect.right, m_dpiX),
-            PhysicalToLogical(rect.bottom, m_dpiY));
-
-        VERIFY(ValidateRect(m_win, nullptr));
+        
+        VERIFY(ValidateRect(hwnd, nullptr));
         return 0;
     });
 
-    on_msg(WM_DPICHANGED, [this](WPARAM w, LPARAM l) -> LRESULT {
-        m_dpiX = LOWORD(w);
-        m_dpiY = HIWORD(w);
-
-        TRACE(L"DPI %.2f %.2f\n", m_dpiX, m_dpiY);
-
-        RECT const* suggested = reinterpret_cast<RECT const*>(l);
-        VERIFY(SetWindowPos(m_win,
-            nullptr,
-            suggested->left,
-            suggested->top,
-            suggested->right - suggested->left,
-            suggested->bottom - suggested->top,
-            SWP_NOACTIVATE | SWP_NOZORDER));
+    On(WM_SIZE, [this](WPARAM, LPARAM) -> LRESULT {
+        ResizeChildWindows();
         return 0;
     });
+}
+
+HWND MainWindow::Create(LPCWSTR lpWindowName) {
+    hwnd = CreateWindowEx(0, class_name.c_str(), lpWindowName, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        nullptr, nullptr, GetModuleHandle(nullptr), this);
+    VERIFY(hwnd);
+
+    return hwnd;
+}
+
+void MainWindow::ResizeChildWindows() {
+    RECT rect = {};
+    VERIFY(GetClientRect(hwnd, &rect));
+
+    if (button) {
+        VERIFY(SetWindowPos(button, nullptr, Margin, Margin, ButtonHeight * 2, ButtonHeight, SWP_NOZORDER));
+    }
+    
+    if (custom.hwnd) {
+        VERIFY(SetWindowPos(custom.hwnd, nullptr, Margin, Margin * 2 + ButtonHeight, (rect.right - rect.left) - Margin * 2, (rect.bottom - rect.top) - Margin * 3 - ButtonHeight, SWP_NOZORDER));
+    }
 }
