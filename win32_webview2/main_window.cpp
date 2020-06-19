@@ -104,7 +104,7 @@ void MainWindow::CreateBrowserWindow() {
             webviewWindow->ExecuteScript(L"window.document.URL;", Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                 [](HRESULT errorCode, LPCWSTR resultObjectAsJson) -> HRESULT {
                 LPCWSTR URL = resultObjectAsJson;
-                //doSomethingWithURL(URL);
+                TRACE(L"URL is %s\n", URL);
                 return S_OK;
             }).Get());
 
@@ -116,6 +116,7 @@ void MainWindow::CreateBrowserWindow() {
                 PWSTR message;
                 args->TryGetWebMessageAsString(&message);
                 // processMessage(&message);
+                TRACE(L"Web Message received %s\n", message);
                 webview->PostWebMessageAsString(message);
                 CoTaskMemFree(message);
                 return S_OK;
