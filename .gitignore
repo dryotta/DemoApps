@@ -1,0 +1,4 @@
+*.user
+.vs
+/win32_webview2/packages
+/win32_webview2/x64

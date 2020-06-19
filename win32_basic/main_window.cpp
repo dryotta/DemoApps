@@ -53,10 +53,6 @@ void MainWindow::SetupMessageHandlers() {
         custom.SetText(L"The button was clicked");
     });
 
-    On(ID_BUTTON, BN_KILLFOCUS, [this]() {
-        custom.SetText(L"The button lost focus");
-    });
-
     On(WM_DESTROY, [this](WPARAM, LPARAM) -> LRESULT {
         PostQuitMessage(0);
         return 0;
