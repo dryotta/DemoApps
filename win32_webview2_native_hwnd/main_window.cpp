@@ -47,8 +47,20 @@ HWND MainWindow::Create(LPCWSTR lpWindowName) {
 }
 
 void MainWindow::ResizeChildWindows() {
+
     RECT rect = {};
     VERIFY(GetClientRect(hwnd, &rect));
+
+    if (webviewController != nullptr) {
+        webviewController->put_Bounds(rect);
+    };
+
+    HWND hwndChrome = FindWindowEx(hwnd, NULL, L"Chrome_WidgetWin_0", NULL);
+    if (hwndChrome) {
+        // ensure it is at bottom
+        VERIFY(SetWindowPos(hwndChrome, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE));
+    }
+    
 
     if (button) {
         VERIFY(SetWindowPos(button, nullptr, Margin, Margin, ButtonHeight * 2, ButtonHeight, SWP_NOZORDER));
@@ -65,26 +77,11 @@ void MainWindow::CreateBrowserWindow() {
             [this](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
 
         // Create a CoreWebView2Controller and get the associated CoreWebView2 whose parent is the main window hWnd
-        env->CreateCoreWebView2Controller(this->hwnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+        env->CreateCoreWebView2Controller(hwnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
             [this](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
             if (controller != nullptr) {
                 webviewController.copy_from(controller);
                 webviewController->get_CoreWebView2(webviewWindow.put());
-            }
-
-            // Move child window
-
-            HWND hwnd = FindWindowEx(this->hwnd, NULL, L"Chrome_WidgetWin_0", NULL);
-            if (hwnd) {
-                SetParent(this->button, hwnd);
-                //SetWindowPos(this->button, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-
-                SetParent(this->custom.hwnd, hwnd);
-
-                hwnd = FindWindowEx(hwnd, NULL, L"Chrome_WidgetWin_1", NULL);
-                if (hwnd) {
-                    
-                }
             }
 
             // Add a few settings for the webview
@@ -101,7 +98,7 @@ void MainWindow::CreateBrowserWindow() {
             webviewController->put_Bounds(bounds);
 
             // Schedule an async task to navigate to Bing
-            webviewWindow->Navigate(L"D:\\Work\\DemoApps\\win32_webview2_native_hwnd\\wwwroot\\index.html");
+            webviewWindow->Navigate(L"https://www.bing.com");
 
             // Step 4 - Navigation events
             // register an ICoreWebView2NavigationStartingEventHandler to cancel any non-https navigation
@@ -134,11 +131,30 @@ void MainWindow::CreateBrowserWindow() {
             // Step 6 - Communication between host and web content
             // Set an event handler for the host to return received message back to the web content
             webviewWindow->add_WebMessageReceived(Callback<ICoreWebView2WebMessageReceivedEventHandler>(
-                [](ICoreWebView2* webview, ICoreWebView2WebMessageReceivedEventArgs* args) -> HRESULT {
+                [this](ICoreWebView2* webview, ICoreWebView2WebMessageReceivedEventArgs* args) -> HRESULT {
                 PWSTR message;
                 args->TryGetWebMessageAsString(&message);
                 // processMessage(&message);
                 TRACE(L"Web Message received %s\n", message);
+
+                // add WS_CLIPSIBLINGS style to ensure native controls to be visible
+                HWND hwndChrome = FindWindowEx(hwnd, NULL, L"Chrome_WidgetWin_0", NULL);
+                if (hwndChrome) {
+                    LONG style = GetWindowLong(hwndChrome, GWL_STYLE);
+                    style |= WS_CLIPSIBLINGS;
+                    SetWindowLong(hwndChrome, GWL_STYLE, style);
+                    VERIFY(SetWindowPos(hwndChrome, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED));
+                }
+
+                // Page have been loaded, create child controls
+                button = CreateWindow(L"BUTTON", L"Click me",
+                    WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
+                    0, 0, 0, 0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
+
+                custom.Create(L"Hello", hwnd);
+
+                ResizeChildWindows();
+
                 webview->PostWebMessageAsString(message);
                 CoTaskMemFree(message);
                 return S_OK;
@@ -148,7 +164,6 @@ void MainWindow::CreateBrowserWindow() {
             // 1) Add an listener to print message from the host
             // 2) Post document URL to the host
             webviewWindow->AddScriptToExecuteOnDocumentCreated(
-                L"window.chrome.webview.addEventListener(\'message\', event => alert(event.data));" \
                 L"window.chrome.webview.postMessage(window.document.URL);",
                 nullptr);
 
@@ -170,15 +185,7 @@ void MainWindow::SetupMessageHandlers() {
 
         TRACE(L"Adjusted %d %d %d %d\n", rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top);
-
         VERIFY(GetClientRect(hwnd, &rect));
-        button = CreateWindow(L"BUTTON", L"Click me",
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
-            0, 0, 0, 0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
-
-        custom.Create(L"Hello", hwnd);
-
-        ResizeChildWindows();
 
         CreateBrowserWindow();
 
@@ -203,12 +210,6 @@ void MainWindow::SetupMessageHandlers() {
     });
 
     On(WM_SIZE, [this](WPARAM, LPARAM) -> LRESULT {
-        if (webviewController != nullptr) {
-            RECT bounds;
-            GetClientRect(this->hwnd, &bounds);
-            webviewController->put_Bounds(bounds);
-        };
-
         ResizeChildWindows();
 
         return 0;
