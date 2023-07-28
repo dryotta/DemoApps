@@ -2,16 +2,23 @@
 #include "utils.h"
 #include "custom_child.h"
 
-CustomChild::CustomChild() {
-    WNDCLASSEXW wc = { 0 };
-    wc.cbSize = sizeof(wc);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(DKGRAY_BRUSH));
-    wc.lpszClassName = CustomChild::class_name.c_str();
+bool CustomChild::firsttime = true;
 
-    VERIFY(RegisterClassEx(&wc));
+CustomChild::CustomChild() {
+    if (firsttime) {
+        WNDCLASSEXW wc = { 0 };
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_HREDRAW | CS_VREDRAW;
+        wc.lpfnWndProc = WndProc;
+        wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+        wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(DKGRAY_BRUSH));
+        wc.lpszClassName = CustomChild::class_name.c_str();
+
+        VERIFY(RegisterClassEx(&wc));
+
+        firsttime = false;
+    }
+
 
     On(WM_PAINT, [this](WPARAM, LPARAM) -> LRESULT {
         HDC hdc;

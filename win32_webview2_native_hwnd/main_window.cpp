@@ -2,10 +2,6 @@
 #include "utils.h"
 #include "tictoc.h"
 
-#include <wrl.h>
-#include "WebView2.h"
-using namespace Microsoft::WRL;
-
 #include "window.h"
 #include "main_window.h"
 
@@ -17,9 +13,6 @@ static LONG const DefWindowWidth = 600;
 static LONG const DefWindowHeight = 400;
 static int Margin = 20;
 static int ButtonHeight = 80;
-
-static com_ptr<ICoreWebView2Controller> webviewController;
-static com_ptr<ICoreWebView2> webviewWindow;
 
 MainWindow::MainWindow(LONGLONG t)
 {
@@ -86,9 +79,6 @@ void MainWindow::ProcessWebMessage(ICoreWebView2* sender, std::wstring message)
             VERIFY(SetWindowPos(hwndChrome, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED));
         }
 
-
-
-        ;
         std::wstring msg = std::format(L"Web window took {} ms to load!", Toc(tic));
         std::wstring reply =
             L"{\"Message\":\"" + msg + L"\"}";
@@ -108,6 +98,12 @@ void MainWindow::ProcessWebMessage(ICoreWebView2* sender, std::wstring message)
         
         ResizeChildWindows();
     }
+
+    if (message.find(L"OnCreateWindow") != std::wstring::npos) {
+        new MainWindow(Tic()); // will leak -- fix later
+    }
+
+    
 }
 
 std::wstring MainWindow::GetLocalPath(std::wstring relativePath)

@@ -25,6 +25,9 @@ private:
 
     std::wstring GetLocalPath(std::wstring path);
     std::wstring GetLocalUri(std::wstring path);
+
+    com_ptr<ICoreWebView2Controller> webviewController;
+    com_ptr<ICoreWebView2> webviewWindow;
 public:
     MainWindow(LONGLONG tic);
 };

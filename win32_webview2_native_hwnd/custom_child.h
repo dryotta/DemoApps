@@ -7,6 +7,8 @@ private:
     inline static const std::wstring class_name{ L"App.Custom.Child" };
     std::wstring text{L"Native: Click the button to change the text."};
 
+    static bool firsttime;
+
 public:
     CustomChild();
 
