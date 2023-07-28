@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="app.cpp" />
+    <ClCompile Include="custom_child.cpp" />
+    <ClCompile Include="main_window.cpp" />
+    <ClCompile Include="pch.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="custom_child.h" />
+    <ClInclude Include="main_window.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="utils.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="$(MSBuildThisFileDirectory)$(EffectivePlatform)\WebView2Loader.dll" />
+    <None Include="assets\start.htm">
+      <Filter>assets</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="assets">
+      <UniqueIdentifier>{db2a84bd-722a-492a-8f15-d955974e60bc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+    <ItemGroup>
+        <CopyFileToFolders Include="assets\*.*" />
+    </ItemGroup>
+
+</Project>

@@ -5,6 +5,9 @@
 
 #include <windows.h>
 
+#include <wil/com.h>
+
+
 #include <winrt/Windows.Foundation.h>
 #pragma comment(lib, "windowsapp")
 using namespace winrt;

@@ -5,7 +5,7 @@
 struct CustomChild : Window<CustomChild> {
 private:
     inline static const std::wstring class_name{ L"App.Custom.Child" };
-    std::wstring text{L"Click the button to change the text."};
+    std::wstring text{L"Native: Click the button to change the text."};
 
 public:
     CustomChild();

@@ -16,6 +16,9 @@ private:
     HWND Create(LPCWSTR lpWindowName);
     void CreateBrowserWindow();
     void ResizeChildWindows();
+
+    std::wstring GetLocalPath(std::wstring path);
+    std::wstring GetLocalUri(std::wstring path);
 public:
     MainWindow();
 };

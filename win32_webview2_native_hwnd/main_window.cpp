@@ -67,8 +67,31 @@ void MainWindow::ResizeChildWindows() {
     }
 
     if (custom.hwnd) {
-        VERIFY(SetWindowPos(custom.hwnd, nullptr, Margin, Margin * 2 + ButtonHeight, (rect.right - rect.left) - Margin * 2, (rect.bottom - rect.top) - Margin * 3 - ButtonHeight, SWP_NOZORDER));
+        VERIFY(SetWindowPos(custom.hwnd, nullptr, Margin * 2 + ButtonHeight * 2, Margin, (rect.right - rect.left) - Margin * 4- ButtonHeight * 2, ButtonHeight, SWP_NOZORDER));
     }
+}
+
+std::wstring MainWindow::GetLocalPath(std::wstring relativePath)
+{
+    WCHAR rawPath[MAX_PATH];
+    GetModuleFileNameW(GetModuleHandle(nullptr), rawPath, MAX_PATH);
+    std::wstring path(rawPath);
+
+    std::size_t index = path.find_last_of(L"\\") + 1;
+    path.replace(index, path.length(), relativePath);
+    return path;
+}
+
+std::wstring MainWindow::GetLocalUri(std::wstring relativePath)
+{
+    std::wstring path = GetLocalPath(L"assets\\" + relativePath);
+
+    wil::com_ptr<IUri> uri;
+    CreateUri(path.c_str(), Uri_CREATE_ALLOW_IMPLICIT_FILE_SCHEME, 0, &uri);
+
+    wil::unique_bstr uriBstr;
+    uri->GetAbsoluteUri(&uriBstr);
+    return std::wstring(uriBstr.get());
 }
 
 void MainWindow::CreateBrowserWindow() {
@@ -98,7 +121,7 @@ void MainWindow::CreateBrowserWindow() {
             webviewController->put_Bounds(bounds);
 
             // Schedule an async task to navigate to Bing
-            webviewWindow->Navigate(L"https://www.bing.com");
+            webviewWindow->Navigate(GetLocalUri(L"start.htm").c_str());
 
             // Step 4 - Navigation events
             // register an ICoreWebView2NavigationStartingEventHandler to cancel any non-https navigation
@@ -147,7 +170,7 @@ void MainWindow::CreateBrowserWindow() {
                 }
 
                 // Page have been loaded, create child controls
-                button = CreateWindow(L"BUTTON", L"Click me",
+                button = CreateWindow(L"BUTTON", L"Native: Click me",
                     WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
                     0, 0, 0, 0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
 
