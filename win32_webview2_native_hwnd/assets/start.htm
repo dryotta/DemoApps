@@ -4,13 +4,25 @@
     <title>Demo</title>
     <script>
         "use strict";
+        //! [chromeWebView]
+        window.chrome.webview.addEventListener('message', arg => {
+            if ("Message" in arg.data) {
+                document.getElementById("status").innerHTML = arg.data.Message;
+            }
+        });
+
+        function OnPageLoad() {
+            window.chrome.webview.postMessage("OnPageLoad");
+        }
     </script>
 </head>
-<body>
+<body onload="OnPageLoad()">
     <div id="div_summary" style="height: 100px"> </div>
     <h1>Webview2 demo app</h1>
-    <p>
-        
-    </p>
+    <button type="button"
+            onclick="window.chrome.webview.postMessage('OnNativeButton');">
+        Click me to create/delete native controls.
+    </button>
+    <p id="status"></p>
 </body>
 </html>

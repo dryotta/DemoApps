@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "utils.h"
+#include "tictoc.h"
 
 #include <wrl.h>
 #include "WebView2.h"
@@ -20,8 +21,10 @@ static int ButtonHeight = 80;
 static com_ptr<ICoreWebView2Controller> webviewController;
 static com_ptr<ICoreWebView2> webviewWindow;
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(LONGLONG t)
 {
+    tic = t;
+
     WNDCLASS wc = {};
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hInstance = GetModuleHandle(nullptr);
@@ -68,6 +71,42 @@ void MainWindow::ResizeChildWindows() {
 
     if (custom.hwnd) {
         VERIFY(SetWindowPos(custom.hwnd, nullptr, Margin * 2 + ButtonHeight * 2, Margin, (rect.right - rect.left) - Margin * 4- ButtonHeight * 2, ButtonHeight, SWP_NOZORDER));
+    }
+}
+
+void MainWindow::ProcessWebMessage(ICoreWebView2* sender, std::wstring message)
+{
+    if (message.find(L"OnPageLoad") != std::wstring::npos) {
+        // add WS_CLIPSIBLINGS style to ensure native controls to be visible
+        HWND hwndChrome = FindWindowEx(hwnd, NULL, L"Chrome_WidgetWin_0", NULL);
+        if (hwndChrome) {
+            LONG style = GetWindowLong(hwndChrome, GWL_STYLE);
+            style |= WS_CLIPSIBLINGS;
+            SetWindowLong(hwndChrome, GWL_STYLE, style);
+            VERIFY(SetWindowPos(hwndChrome, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED));
+        }
+
+
+
+        ;
+        std::wstring msg = std::format(L"Web window took {} ms to load!", Toc(tic));
+        std::wstring reply =
+            L"{\"Message\":\"" + msg + L"\"}";
+        sender->PostWebMessageAsJson(reply.c_str());
+    }
+
+    if (message.find(L"OnNativeButton") != std::wstring::npos) {
+        if (button) {
+            DestroyWindow(button);
+            button = nullptr;
+        }
+        else {
+            button = CreateWindow(L"BUTTON", L"Native: Click me",
+                WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
+                0, 0, 0, 0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
+        }
+        
+        ResizeChildWindows();
     }
 }
 
@@ -160,25 +199,8 @@ void MainWindow::CreateBrowserWindow() {
                 // processMessage(&message);
                 TRACE(L"Web Message received %s\n", message);
 
-                // add WS_CLIPSIBLINGS style to ensure native controls to be visible
-                HWND hwndChrome = FindWindowEx(hwnd, NULL, L"Chrome_WidgetWin_0", NULL);
-                if (hwndChrome) {
-                    LONG style = GetWindowLong(hwndChrome, GWL_STYLE);
-                    style |= WS_CLIPSIBLINGS;
-                    SetWindowLong(hwndChrome, GWL_STYLE, style);
-                    VERIFY(SetWindowPos(hwndChrome, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED));
-                }
+                ProcessWebMessage(webview, message);
 
-                // Page have been loaded, create child controls
-                button = CreateWindow(L"BUTTON", L"Native: Click me",
-                    WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | BS_NOTIFY,
-                    0, 0, 0, 0, hwnd, (HMENU)ID_BUTTON, GetModuleHandle(nullptr), nullptr);
-
-                custom.Create(L"Hello", hwnd);
-
-                ResizeChildWindows();
-
-                webview->PostWebMessageAsString(message);
                 CoTaskMemFree(message);
                 return S_OK;
             }).Get(), &token);
@@ -186,9 +208,10 @@ void MainWindow::CreateBrowserWindow() {
             // Schedule an async task to add initialization script that
             // 1) Add an listener to print message from the host
             // 2) Post document URL to the host
-            webviewWindow->AddScriptToExecuteOnDocumentCreated(
-                L"window.chrome.webview.postMessage(window.document.URL);",
-                nullptr);
+
+            // webviewWindow->AddScriptToExecuteOnDocumentCreated(
+            //     L"window.chrome.webview.postMessage(window.document.URL);",
+            //     nullptr);
 
 
             return S_OK;
@@ -209,6 +232,11 @@ void MainWindow::SetupMessageHandlers() {
         TRACE(L"Adjusted %d %d %d %d\n", rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top);
         VERIFY(GetClientRect(hwnd, &rect));
+
+        custom.Create(L"Hello", hwnd);
+        custom.SetText(std::format(L"Native window took {} ms to load! \n", Toc(tic)));
+
+        ResizeChildWindows();
 
         CreateBrowserWindow();
 

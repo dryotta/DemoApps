@@ -8,7 +8,6 @@ private:
     std::map<UINT, std::function<LRESULT(WPARAM wparam, LPARAM)>> msg_map; // map of message handlers
     std::map<UINT, std::function<void()>> cmd_map; // map of WM_COMMAND handlers
     std::map<std::pair<UINT_PTR, UINT>, std::function<void()>> ntf_map; // map of WM_NOTIFY handlers, pair of idFrom and code
-
 public:
     HWND hwnd = nullptr;    
 

@@ -5,6 +5,7 @@
     <ClCompile Include="custom_child.cpp" />
     <ClCompile Include="main_window.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="tictoc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="custom_child.h" />
@@ -13,6 +14,7 @@
     <ClInclude Include="utils.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="window.h" />
+    <ClInclude Include="tictoc.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc" />
@@ -32,8 +34,4 @@
       <UniqueIdentifier>{db2a84bd-722a-492a-8f15-d955974e60bc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
-    <ItemGroup>
-        <CopyFileToFolders Include="assets\*.*" />
-    </ItemGroup>
-
 </Project>
